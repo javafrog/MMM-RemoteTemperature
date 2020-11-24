@@ -23,8 +23,7 @@ Module.register('MMM-RemoteTemperature', {
   getStyles() {
     return [
       'MMM-RemoteTemperature.css',
-      'font-awesome.css',
-      'font-awesome5.css'
+      'font-awesome.css'
     ];
   },
 
@@ -38,6 +37,7 @@ Module.register('MMM-RemoteTemperature', {
   start() {
     this.viewModel = null;
     this._initCommunication();
+    this.sendSocketNotification('CONFIG', this.config);
   },
 
   getDom() {
@@ -55,14 +55,14 @@ Module.register('MMM-RemoteTemperature', {
       if (this.viewModel.temp) {
         const tempEl = document.createElement('span');
         tempEl.classList = 'temp';
-        tempEl.innerHTML = `${this.viewModel.temp}&deg;`;
+        tempEl.innerHTML = `${Math.round(this.viewModel.temp*10)/10}&deg;`;
         firstLineEl.appendChild(tempEl);
       }
 
       if (this.viewModel.humidity) {
         const humidityEl = document.createElement('span');
         humidityEl.classList = 'humidity';
-        humidityEl.innerHTML = `${this.viewModel.humidity}%`;
+        humidityEl.innerHTML = `${Math.round(this.viewModel.humidity)}%`;
         firstLineEl.appendChild(humidityEl);
       }
 
@@ -112,5 +112,33 @@ Module.register('MMM-RemoteTemperature', {
 
   _formatTimestamp(timestamp) {
     return moment(timestamp).format('HH:mm');
-  }
+  },
+
+  notificationReceived: function (notification, payload, sender)
+  {
+      if (notification == "SignalR.default.environment")
+      {
+          try
+          {
+              let json = JSON.parse(payload);
+
+              if (this.config.sensorId !== json.dev_id) return;
+
+              console.log(json);
+
+              this.viewModel = {
+                temp: json.payload_fields.t,
+                humidity: json.payload_fields.h,
+                battery: json.payload_fields.b,
+                timestamp: Date.now()
+              };
+
+              this.updateDom();
+          }
+          catch (exception)
+          {
+              console.warn("Error processing SignalR message: "+exception);
+          }
+      }
+  },
 });
