@@ -19,3 +19,11 @@
   font-size: 16px;
   margin-left: 15px;
 }
+
+.MMM-RemoteTemperature .symbol.disconnected {
+  color: #a04f4f;
+}
+
+.MMM-RemoteTemperature .symbol.error {
+  color: #ff0000;
+}

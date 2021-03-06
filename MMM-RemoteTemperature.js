@@ -49,6 +49,10 @@ Module.register('MMM-RemoteTemperature', {
       if (this.config.icon) {
         const iconEl = document.createElement('span');
         iconEl.classList = `symbol fa fa-${this.config.icon}`;
+
+        // color the icon depending on the connection state
+        if (this.viewModel.connectionState) iconEl.classList += " "+this.viewModel.connectionState;
+
         firstLineEl.appendChild(iconEl);
       }
 
@@ -116,29 +120,45 @@ Module.register('MMM-RemoteTemperature', {
 
   notificationReceived: function (notification, payload, sender)
   {
-      if (notification == "SignalR.default.environment")
+      if (notification.startsWith("SignalR."))
       {
-          try
+          const topicFragments = notification.split(".");
+
+          // TODO: handle the namespace part ([1])
+          if (topicFragments[2] == "STATUS")
           {
-              let json = JSON.parse(payload);
-
-              if (this.config.sensorId !== json.dev_id) return;
-
-              console.log(json);
-
-              this.viewModel = {
-                temp: json.payload_fields.t,
-                humidity: json.payload_fields.h,
-                battery: json.payload_fields.b,
-                timestamp: Date.now()
-              };
-
+              if (this.viewModel) this.viewModel.connectionState = payload;
               this.updateDom();
           }
-          catch (exception)
+          if (topicFragments[2] == "environment")
           {
-              console.warn("Error processing SignalR message: "+exception);
+              this.processSignalRUpdate(payload);
           }
       }
   },
+
+  processSignalRUpdate: function(payload)
+  {
+      try
+      {
+          let json = JSON.parse(payload);
+
+          if (this.config.sensorId !== json.dev_id) return;
+
+          console.log(json);
+
+          this.viewModel = {
+            temp: json.payload_fields.t,
+            humidity: json.payload_fields.h,
+            battery: json.payload_fields.b,
+            timestamp: Date.now()
+          };
+
+          this.updateDom();
+      }
+      catch (exception)
+      {
+          console.warn("Error processing SignalR message: "+exception);
+      }
+  }
 });
